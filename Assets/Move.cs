@@ -93,7 +93,7 @@ public class Move : MonoBehaviour
         {
             if (hit.collider.gameObject.tag != "Walkable")
             {
-                Debug.Log("Wrong object " + hit.collider.gameObject.name);
+                //Debug.Log("Wrong object " + hit.collider.gameObject.name);
                 return;
             }
             GameObject player = GameObject.Find("Player");
@@ -106,7 +106,8 @@ public class Move : MonoBehaviour
         }
         else
         {
-            Debug.Log("Raycast miss");
+            //Debug.Log("Raycast miss");
+            return;
         }
     }
 }

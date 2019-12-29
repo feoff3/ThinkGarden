@@ -8,4 +8,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/modernity.unity
     guid: a6fe3f9fdf73c454a955f78ea50de4e9
+  - enabled: 0
+    path: Assets/QuickOutline/Samples/Scenes/QuickOutline.unity
+    guid: f23712c79adc910408e872b127e825cf
   m_configObjects: {}

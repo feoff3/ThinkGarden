@@ -9,7 +9,7 @@ public class Use : NodHandler
     GvrPointerInputModule input;
     GameObject current_object = null;
     GameObject last_object = null;
-    TextMesh question = null;
+    UnityEngine.UI.Text question = null;
     public float forget_object_delay = 1.0f;
     public float outline_radius = 10.0f;
     public float outline_width = 3.0f;
@@ -19,7 +19,9 @@ public class Use : NodHandler
     void Start()
     {
         pointer = GameObject.Find("GvrReticlePointer").GetComponent<GvrReticlePointer>();
-        question = GameObject.Find("Question").GetComponent<TextMesh>();
+        question = GameObject.Find("Question").GetComponent<UnityEngine.UI.Text>();
+        //if (question != null)
+        //    question.text = Screen.currentResolution.ToString();
         base.Register();
         base.SetTargetObject(null);
         if (outline_radius > 0)
