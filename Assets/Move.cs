@@ -58,7 +58,7 @@ public class Move : MonoBehaviour
         {
             float distance_walked = (start_pos - player.transform.position).magnitude;
             float t = Time.time - start_time;
-            float a = (float)(System.Math.Pow(max_move_distance * 6 , 0.3)); // most probably the movement will end somewhere there
+            float a = (float)(System.Math.Pow(max_move_distance * 6, 0.3)); // most probably the movement will end somewhere there
             float current_speed = Speed * t * (a - t);
             Vector3 intermediate_pos = Vector3.MoveTowards(player.transform.position, target_pos, current_speed * Time.deltaTime);
             // a liitle oscillation of y
@@ -69,6 +69,13 @@ public class Move : MonoBehaviour
                 target_pos = intermediate_pos; // setting it as an end of the trajectory if distance is too far
             }
             player.transform.position = intermediate_pos;
+        }
+        else
+        {   // for debugging on PC
+            if (Input.GetMouseButtonDown(1))
+            {
+                MovePlayer();
+            }
         }
     }
 

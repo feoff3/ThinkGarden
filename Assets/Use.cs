@@ -13,6 +13,9 @@ public class Use : NodHandler
     public float forget_object_delay = 1.0f;
     public float outline_radius = 10.0f;
     public float outline_width = 3.0f;
+    public float default_time_to_read = 4.0f;
+    float read_start_time = 0;
+    bool read_complete = false;
     string new_text = "";
     ArrayList objects_around;
     // Start is called before the first frame update
@@ -35,12 +38,49 @@ public class Use : NodHandler
         objects_around = new ArrayList();
     }
 
+    bool IsObjectUsable(GameObject obj)
+    {
+        return obj.tag == "Usable" || obj.tag == "Readable" || obj.GetComponent<Usable>() != null;
+    }
+
+    bool IsObjectReadable(GameObject obj)
+    {
+        return obj.tag == "Readable" || obj.GetComponent<Readable>() != null;
+    }
+
+    float GetTimeToRead(GameObject obj)
+    {
+        Readable r = obj.GetComponent<Readable>();
+        if (r != null)
+        {
+            return r.time_to_read;
+        }
+        return default_time_to_read;
+    }
+
+    void OnRead(GameObject obj)
+    {
+        Readable r = obj.GetComponent<Readable>();
+        if (r != null)
+        {
+            r.OnUse();
+        }
+        else
+        {
+            // TODO: check settings if to play subtitles
+            AudioSource clip = obj.GetComponentInChildren<AudioSource>();
+            if (clip && clip.isPlaying == false)
+                clip.Play();
+            new_text = GetObjectText(obj, true);
+        }
+    }
+
     // outline object which in collider
     private void OnTriggerEnter(Collider other)
     {
         if (objects_around.Contains(other.gameObject))
             return;
-        if (other.gameObject.tag != "Usable")
+        if (IsObjectUsable(other.gameObject) == false)
             return;
         Debug.Log("New object in collider " + other.gameObject.name);
         Usable usable;
@@ -51,7 +91,10 @@ public class Use : NodHandler
         }
         var outline = other.gameObject.GetComponent<Outline>();
         if (outline == null)
+        {
             outline = other.gameObject.AddComponent<Outline>();
+            outline.enabled = false;
+        }
         if (outline.enabled == false)
         {
             outline.OutlineMode = Outline.Mode.OutlineVisible;
@@ -64,7 +107,7 @@ public class Use : NodHandler
     }
     private void OnTriggerStay(Collider other)
     {
-        if (other.gameObject.tag != "Usable")
+        if (IsObjectUsable(other.gameObject) == false)
             return;
         var outline = other.gameObject.GetComponent<Outline>();
         if (outline == null)
@@ -75,12 +118,25 @@ public class Use : NodHandler
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.gameObject.tag != "Usable")
+        if (IsObjectUsable(other.gameObject) == false)
             return;
         var outline = other.gameObject.GetComponent<Outline>();
         if (outline != null)
             outline.enabled = false;
         objects_around.Remove(other.gameObject);
+    }
+
+    string GetObjectText(GameObject obj, bool subtitles = false)
+    {
+        TextMesh[] texts = obj.GetComponentsInChildren<TextMesh>();
+        for (int i = 0; i < texts.Length; i++)
+        {
+            if (texts[i].name == "Subtitles" && subtitles)
+                return texts[i].text;
+            if (texts[i].name != "Subtitles")
+                return texts[i].text;
+        }
+        return "";
     }
 
     // Update is called once per frame
@@ -93,7 +149,7 @@ public class Use : NodHandler
         // manage rectile pointer
         if (Physics.Raycast(transform.position, transform.forward, out hit, max_look_distance))
         {
-            if (hit.collider.gameObject.tag != "Usable")
+            if (IsObjectUsable(hit.collider.gameObject) == false)
             {
                 end_pointer = true;
             }
@@ -103,18 +159,46 @@ public class Use : NodHandler
                 {
                     pointer.OnPointerEnter(GvrPointerInputModule.CurrentRaycastResult, true);
                     current_object = hit.collider.gameObject;
-                    TextMesh text = current_object.GetComponentInChildren<TextMesh>();
-                    new_text = "";
-                    if (text != null)
-                    {
-                        new_text = text.text;
-                    }
+                    new_text = GetObjectText(current_object);
                 }
                 else
                 {
                     pointer.OnPointerHover(GvrPointerInputModule.CurrentRaycastResult, true);
-                    if (question.text.Length != new_text.Length)
+                    if (question.text.Length != new_text.Length && read_start_time == 0)
                         question.text = new_text.Substring(0, question.text.Length + 1);
+                    // Gaze base interaction for read
+                    else
+                    {
+                        if (IsObjectReadable(hit.collider.gameObject) && read_complete == false)
+                        {
+                            // play gaze progress animation
+                            if (read_start_time == 0)
+                                read_start_time = Time.time;
+
+                            float time_to_read = GetTimeToRead(hit.collider.gameObject);
+                            if (Time.time - read_start_time > time_to_read)
+                            {
+                                // end gaze animation
+                                OnRead(hit.collider.gameObject);
+                                read_complete = true;
+                                read_start_time = 0;
+                            }
+                            else
+                            {
+                                float percent = ((Time.time - read_start_time) / time_to_read) * 100.0f;
+                                //string percent_str = ((int)percent).ToString();
+                                string percent_str = "";
+                                int num_percent = (int)percent / 8;
+                                for (int i = 0; i < 8; i++)
+                                {
+                                    if (i < num_percent)
+                                        percent_str += '\u2588';
+                                }
+                                if (percent_str != "")
+                                    question.text = new_text + " " + percent_str;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -136,6 +220,9 @@ public class Use : NodHandler
         {
             current_object = null;
             question.text = "";
+            // gaze stop animation
+            read_start_time = 0;
+            read_complete = false;
         }
     }
 
@@ -180,5 +267,15 @@ public class Usable : MonoBehaviour
         var outline = gameObject.GetComponent<Outline>();
         if (outline)
             outline.enabled = false;
+    }
+}
+
+public class Readable : Usable
+{
+    public float time_to_read = 3.0f;
+
+    public virtual void OnUse() 
+    {
+        // TODO: read from config if to read subtitles
     }
 }

@@ -9,22 +9,26 @@ public class Darker : NodHandler
     bool ended = false;
     public Light sun = null;
     float initial_sky_brightness = 1;
+    float initial_sun_intensity = 1.0f;
     public float darker_speed = 2.5f;
     public BaseRainScript RainScript;
     public float rain_delay = 5.0f;
     public float dark_intensity = 0.6f;
     public float rain_intensity = 0.6f;
+    public float brighter_delay = 40.0f;
+    Brighter brighter_script = null;
 
     Light[] FindLightsWithName(string name)
     {
-        int a = GameObject.FindObjectsOfType<Light>().Length;
+        var lights = GameObject.FindObjectsOfType<Light>();
+        int a = lights.Length;
         Light[] arr = new Light[a];
         int FluentNumber = 0;
         for (int i = 0; i < a; i++)
         {
-            if (GameObject.FindObjectsOfType<Light>()[i].name == name)
+            if (lights[i].name == name)
             {
-                arr[FluentNumber] = GameObject.FindObjectsOfType<Light>()[i];
+                arr[FluentNumber] = lights[i];
                 FluentNumber++;
             }
         }
@@ -54,6 +58,8 @@ public class Darker : NodHandler
         {
             if (sun == null)
                 sun = GameObject.Find("Sun").GetComponent<Light>();
+            if (sun == null)
+                return;
             if (sun)
             {
                 sun.intensity -= 0.002f * darker_speed;
@@ -78,6 +84,7 @@ public class Darker : NodHandler
                 ended = true;
                 StartNightLights();
                 Invoke("StartRain", rain_delay);
+                Invoke("MakeBrighter", brighter_delay);
             }
         }
     }
@@ -105,12 +112,39 @@ public class Darker : NodHandler
         RainScript.RainIntensity = rain_intensity;
     }
 
+    private void StopWind()
+    {
+        if (RainScript == null)
+            return;
+        RainScript.EnableWind = false;
+    }
+
+    private void StopRain()
+    {
+        if (RainScript == null)
+            return;
+        RainScript.RainIntensity = 0.0f;
+    }
+
+    private void MakeBrighter()
+    {
+        brighter_script = GetComponent<Brighter>();
+        if (brighter_script != null)
+        {
+            brighter_script.final_intensity = initial_sun_intensity;
+            StopWind();
+            StopRain();
+            brighter_script.MakeBrighter();
+        }
+    }
+
 
     protected override void OnNod()
     {
         if (happening || ended)
             return;
         happening = true;
+        initial_sun_intensity = sun.intensity;
         StartWind();
     }
 
